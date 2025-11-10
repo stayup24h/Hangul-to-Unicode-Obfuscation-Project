@@ -6,8 +6,9 @@ from tqdm import tqdm
 
 from search_fonts import NOTO_FONTS_NAME
 
-# 스크립트 파일의 위치
+# 현재 이 파일의 위치
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# ! 폰트 파일 위치 (설정 필요)
 FONT_PATH: str = os.path.join(
     SCRIPT_DIR, "..", r"notofonts\fonts\{0}\full\ttf\{0}-Regular.ttf"
 )
@@ -15,13 +16,19 @@ FONT_PATH: str = os.path.join(
 # --- 설정 ---
 IMAGE_HEIGHT = 64
 IMAGE_WIDTH = 64
-OUTPUT_FILENAME_BASE = (
-    "unicode_tensors"  # unicode_tensors_0.npy, unicode_tensors_1.npy 등으로 저장됩니다.
+OUTPUT_FILENAME_BASE = "unicode_tensors"  # unicode_tensors_{k}.npy로 저장됨
+UNRENDERED_LOG_FILENAME = (
+    "unrendered_characters.txt"  # 렌더 안 되는 빈 유니코드 목록 저장
 )
-UNRENDERED_LOG_FILENAME = "unrendered_characters.txt"
-FONT_SIZE = 48  # 이미지 크기에 맞게 조절
-# 유니코드 범위를 나눌 크기 (65536개씩). 약 1GB의 메모리를 사용하며 총 17개의 파일이 생성될 수 있습니다.
+FONT_SIZE = 48  # 이미지 크기에 맞게 조절 필요
+
+# 텐서 하나로 만들 유니코드 범위 크기
+# 0x10000 (65536개씩) 약 1GB, 4개 파일
+# 0x04000 (16384개씩) 약 256MB, 16개 파일
+# 0x01000 (4096개씩) 약 64MB, 64개 파일
 CHUNK_SIZE = 0x08000
+# 중간에 중단해도, 이 값을 수정하여 START_INDEX번째 파일부터 돌릴 수 있음
+START_INDEX = 0
 
 # --- 유니코드 제외 범위 ---
 # C0/C1 제어 문자, 서로게이트, 사설 영역 등은 렌더링할 수 없거나 의미가 없습니다.
@@ -31,8 +38,9 @@ EXCLUDE_RANGES = [
     (0xD800, 0xDFFF),  # High and Low Surrogates
     (0xE000, 0xF8FF),  # Private Use Area
     (0xFFF0, 0xFFFF),  # Specials
-    (0xF0000, 0xFFFFD),  # Supplementary Private Use Area-A
-    (0x100000, 0x10FFFD),  # Supplementary Private Use Area-B
+    # (0xF0000, 0xFFFFD),  # Supplementary Private Use Area-A
+    # (0x100000, 0x10FFFD),  # Supplementary Private Use Area-B
+    # 애초에 x40000까지만 의미있어서 여기까진 순회 안 해도 됨
 ]
 
 
@@ -119,8 +127,10 @@ def main():
     rendered_count = 0  # 렌더링에 성공한 문자 수
 
     # 전체 유니코드 범위를 CHUNK_SIZE에 따라 순회합니다.
-    for chunk_index, start_codepoint in enumerate(range(0, 0x110000, CHUNK_SIZE)):
-        end_codepoint = min(start_codepoint + CHUNK_SIZE, 0x110000)
+    for chunk_index, start_codepoint in enumerate(
+        range(START_INDEX, 0x40000, CHUNK_SIZE)
+    ):
+        end_codepoint = min(start_codepoint + CHUNK_SIZE, 0x40000)
 
         # 청크의 모든 코드 포인트가 제외 대상인지 확인합니다.
         is_fully_excluded = all(
