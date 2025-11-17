@@ -1,17 +1,9 @@
 import os
 
 # Noto Fonts가 모여있는 리포지토리의 fonts폴더의 PATH(https://github.com/notofonts/notofonts.github.io/tree/main/fonts)
-NOTO_FONTS_PATH = r"notofonts\fonts"
+NOTO_FONTS_PATH = r"..\notofonts\fonts"
 
 NOTO_FONTS_NAME = [
-    "NotoFangsongKSSRotated",
-    "NotoFangsongKSSVertical",
-    "NotoKufiArabic",
-    "NotoMusic",
-    "NotoNaskhArabic",
-    "NotoNaskhArabicUI",
-    "NotoNastaliqUrdu",
-    "NotoRashiHebrew",
     "NotoSans",
     "NotoSansAdlam",
     "NotoSansAdlamUnjoined",
@@ -173,6 +165,53 @@ NOTO_FONTS_NAME = [
     "NotoSansWarangCiti",
     "NotoSansYi",
     "NotoSansZanabazarSquare",
+    "NotoFangsongKSSRotated",
+    "NotoFangsongKSSVertical",
+    "NotoKufiArabic",
+    "NotoMusic",
+    "NotoNaskhArabic",
+    "NotoNaskhArabicUI",
+    "NotoNastaliqUrdu",
+    "NotoRashiHebrew",
+    "NotoSerif",
+    "NotoSerifAhom",
+    "NotoSerifArmenian",
+    "NotoSerifBalinese",
+    "NotoSerifBengali",
+    "NotoSerifDevanagari",
+    "NotoSerifDisplay",
+    "NotoSerifDivesAkuru",
+    "NotoSerifDogra",
+    "NotoSerifEthiopic",
+    "NotoSerifGeorgian",
+    "NotoSerifGrantha",
+    "NotoSerifGujarati",
+    "NotoSerifGurmukhi",
+    "NotoSerifHebrew",
+    "NotoSerifHentaigana",
+    "NotoSerifKannada",
+    "NotoSerifKhitanSmallScript",
+    "NotoSerifKhmer",
+    "NotoSerifKhojki",
+    "NotoSerifLao",
+    "NotoSerifMakasar",
+    "NotoSerifMalayalam",
+    "NotoSerifMyanmar",
+    "NotoSerifNPHmong",
+    "NotoSerifOldUyghur",
+    "NotoSerifOriya",
+    "NotoSerifOttomanSiyaq",
+    "NotoSerifSinhala",
+    "NotoSerifTamil",
+    "NotoSerifTangut",
+    "NotoSerifTelugu",
+    "NotoSerifTest",
+    "NotoSerifThai",
+    "NotoSerifTibetan",
+    "NotoSerifTodhri",
+    "NotoSerifToto",
+    "NotoSerifVithkuqi",
+    "NotoSerifYezidi",
     "NotoTraditionalNushu",
     "NotoZnamennyMusicalNotation",
 ]
@@ -182,6 +221,15 @@ def get_fonts_name(noto_fonts_path: str) -> list[str]:
     """noto_fonts_path 하위의 모든 폴더 이름(폰트 이름)을 리스트로 반환합니다."""
     font_names = []
     for name in os.listdir(noto_fonts_path):
-        if not name.count("Serif"):
+        if not name.count("LICENSE"):
             font_names.append(name)
     return font_names
+
+
+def sans_is_superior_to_serif(font_list: list[str]) -> list[str]:
+    """이름에 Sans가 명시된 폰트가 가장 먼저 검색되도록 앞으로 옮깁니다."""
+    return list(sorted(font_list, key=lambda x: 1 if x.find("Sans") == -1 else 0))
+
+
+if __name__ == "__main__":
+    print(sans_is_superior_to_serif(get_fonts_name(NOTO_FONTS_PATH)))
