@@ -12,14 +12,14 @@ from one_hot_hangul import one_hot_hangul
 ### 5만 개 파일씩 나눠서 벡터화되며 레이블도 저장됨
 
 ### tensor_printed_i.npy(이미지 텐서)를 내놓음
-### tensor_printed_i_annotations.json(어노테이션)을 내놓음
+### label_printed_i.npy(레이블 벡터)를 내놓음
 
-LABEL_PATH = "AI_hub/13.한국어글자체/02.인쇄체_230721_add/printed_data_info.json"
+LABEL_PATH = "AI_hub/13.한국어글자체/01.손글씨/handwriting_data_info_clean.json"
 IMAGES_PATH = (
-    "AI_hub/13.한국어글자체/02.인쇄체_230721_add/01_printed_syllable_images/syllables/"
+    "AI_hub/13.한국어글자체/01.손글씨/02_handwriting_syllable_images/2_syllable/"
 )
-PANNING_WIDTH = 150
-PANNING_HEIGHT = 150
+PANNING_WIDTH = 200
+PANNING_HEIGHT = 200
 
 
 def pan_image(img: Image.Image, width: int, height: int):
@@ -52,7 +52,7 @@ def main():
         images = printed_data_info["images"]  # 이미지 width/height 정보
         annotations = printed_data_info["annotations"]  # 레이블 및 메타데이터
 
-    for i in range(0, len(annotations) // 50000):
+    for i in range(14, len(annotations) // 50000):
         valid_annotations = []
         for k in range(50000 * i, 50000 * (i + 1)):
             if (
@@ -61,55 +61,50 @@ def main():
                 and images[k]["width"] <= PANNING_WIDTH  # 너비/높이가 모두 panning 미만
                 and images[k]["height"] <= PANNING_HEIGHT
             ):
-
                 valid_annotations.append(annotations[k])
 
         print("Vectorization Start")
         n = len(valid_annotations)
         if n == 0:
-            # results = np.empty((0, PANNING_WIDTH, PANNING_HEIGHT), dtype=np.uint8)
+            results = np.empty((0, PANNING_WIDTH, PANNING_HEIGHT), dtype=np.uint8)
             labels = np.empty((0, 68), dtype=np.bool_)
         else:
-            # width, height = PANNING_HEIGHT, PANNING_WIDTH
-            # results = np.empty((n, width, height), dtype=np.uint8)
+            width, height = PANNING_HEIGHT, PANNING_WIDTH
+            results = np.empty((n, width, height), dtype=np.uint8)
             labels = np.empty((n, 68), dtype=np.bool_)
 
             # 이미지 경로 리스트 생성
-            # img_paths = []
+            img_paths = []
             for p, anno in enumerate(valid_annotations):
-                # image_name = anno["image_id"]
-                # img_paths.append((IMAGES_PATH + f"{image_name}.png"))
+                if int(anno["image_id"]) < 200000:
+                    break
+                image_name = anno["image_id"]
+                img_paths.append((IMAGES_PATH + f"{image_name}.png"))
                 labels[p] = one_hot_hangul(anno["text"])
 
-            # # 병렬 워커 수 설정
-            # workers = min(8, (os.cpu_count() or 1))
+            # 병렬 워커 수 설정
+            workers = min(8, (os.cpu_count() or 1))
 
-            # # ProcessPoolExecutor로 병렬 처리 (IO+CPU 작업에 적합)
-            # with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as ex:
-            #     # ex.map은 입력 순서를 보장하므로 인덱스와 매핑 가능
-            #     for j, arr in enumerate(
-            #         ex.map(
-            #             partial(process_image_path, width=width, height=height),
-            #             img_paths,
-            #         )
-            #     ):
-            #         if (j + 1) % 1000 == 0:
-            #             print(f"{j+1}/50000")
-            #         results[j] = arr
+            # ProcessPoolExecutor로 병렬 처리 (IO+CPU 작업에 적합)
+            with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as ex:
+                # ex.map은 입력 순서를 보장하므로 인덱스와 매핑 가능
+                for j, arr in enumerate(
+                    ex.map(
+                        partial(process_image_path, width=width, height=height),
+                        img_paths,
+                    )
+                ):
+                    if (j + 1) % 1000 == 0:
+                        print(f"{j+1}/{n}")
+                    results[j] = arr
 
-        # np.save(f"tensor_printed_{i}", results)
-        # print(f"tensor_printed_{i} saved!")
-        # print(results.shape)
+        np.save(f"obfuscation_tensors/tensor_handwriting_{i+1}", results)
+        print(f"tensor_handwriting_{i+1} saved!")
+        print(results.shape)
 
-        np.save(f"labels_printed_{i}", labels)
-        print(f"labels_printed_{i} saved!")
+        np.save(f"obfuscation_labels/labels_handwriting_{i+1}", labels)
+        print(f"labels_handwriting_{i+1} saved!")
         print(labels.shape)
-
-        # with open(
-        #     f"tensor_printed_{i}_annotations.json", "w", encoding="utf-8"
-        # ) as annos:
-        #     annos.write(json.dumps(valid_annotations, ensure_ascii=False))
-        #     print(f"tensor_printed_{i}_annotations saved!")
 
 
 if __name__ == "__main__":

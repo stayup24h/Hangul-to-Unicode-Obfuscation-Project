@@ -2,8 +2,8 @@
 
 import numpy as np
 
-for k in range(23):
-    tensor = np.load(f"obfuscation_tensors/tensor_handwriting_{k}.npy")
+for k in range(1000):
+    tensor = np.load(f"unicode_tensors_{k}.npy")
     n = 0
     first = 0
     allow = True
@@ -14,7 +14,7 @@ for k in range(23):
                 first = j
                 allow = False
     if n:
-        print(k, "번째 파일, ", first, "이후 총 ", n, "개의 검은 파일이 있습니다.")
+        print(k, "번째 파일, ", first, "이후 총 ", n, "개의 흰 파일이 있습니다.")
     else:
-        print(k, "번째 파일에는 검은 파일이 없습니다.")
+        print(k, "번째 파일에는 흰 파일이 없습니다.")
     print(tensor.shape)

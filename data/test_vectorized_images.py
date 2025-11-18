@@ -1,15 +1,11 @@
 import numpy as np
 from PIL import Image
 from one_hot_hangul import CHOSUNG_LIST, JUNGSUNG_LIST, JONGSUNG_LIST
+from random import randint
+import unicodedata
 
 
 # !!!!! 테스트할 데이터들의 PATH를 잘 입력하세요
-
-# k = 0 # k번째 텐서와 레이블을 같이 테스팅할 수 있도록 하는 변수
-# PATH_TENSOR = f"Hangul-to-Unicode-Obfuscation-Project/unicode_tensors_{k}.npy"
-# PATH_LABEL = f"obfuscation_labels/labels_handwriting_{k}.npy"
-j = 0
-PATH_UNICODE_TENSOR = f"unicode_tensors_{j}.npy"
 
 
 # 훈련 세트 전용 검사기 (이미지 출력)
@@ -84,8 +80,8 @@ def test_unicode_tensor(
         img.show(str(i) + ".png")
 
 
-# 레이블 전용 검사기 (인코딩 -> 레이블 출력)
-def test_label(
+# 훈련 세트 레이블 전용 검사기 (인코딩 -> 레이블 출력)
+def test_dataset_label(
     path: str, how_many: int = 3, starting_from: int = 0, reversed: bool = False
 ) -> None:
     loaded = np.load(path)
@@ -127,9 +123,52 @@ def test_label(
                 print(JONGSUNG_LIST[i - 40])
 
 
-# 64번 부터 순방향 5개 유니코드를 검사
+# 유니코드 레이블 전용 검사기 (레이블, 레이블의 ord(), 레이블의 이름 출력)
+def test_unicode_label(
+    path: str, how_many: int = 3, starting_from: int = 0, reversed: bool = False
+) -> None:
+    loaded = np.load(path)
+    length = loaded.shape[0]
+
+    print("텐서 모양: ", loaded.shape)
+
+    n_show = min(how_many, length - starting_from)
+
+    if not reversed:
+        start = starting_from
+        end = starting_from + n_show - 1
+    else:
+        start = length - 1 - starting_from
+        end = length - starting_from - n_show
+
+    print(
+        start,
+        "번째 데이터부터 ",
+        end,
+        "번째 데이터까지 확인합니다.",
+    )
+
+    reversed_int = 1 if not reversed else -1
+
+    for i in range(start, end + reversed_int, reversed_int):
+        code_point = loaded[i]
+        print(chr(code_point), hex(code_point), unicodedata.name(chr(code_point)))
+
+
+INDEX = 1091
+
 test_unicode_tensor(
-    path=PATH_UNICODE_TENSOR, how_many=5, starting_from=64, reversed=False
+    path="unicode_tensors_0.npy",
+    how_many=5,
+    starting_from=INDEX,
+    reversed=False,
 )
 
-# test_label(path=PATH_LABEL, how_many=5, starting_from=20000, reversed=False)
+"ᐚ ᐛ"
+
+test_unicode_label(
+    path="unicode_labels_0.npy",
+    how_many=5,
+    starting_from=INDEX,
+    reversed=False,
+)
