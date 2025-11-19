@@ -127,7 +127,7 @@ def test_dataset_label(
 def test_unicode_label(
     path: str, how_many: int = 3, starting_from: int = 0, reversed: bool = False
 ) -> None:
-    loaded = np.load(path)
+    loaded = np.load(path, allow_pickle=True)
     length = loaded.shape[0]
 
     print("텐서 모양: ", loaded.shape)
@@ -151,14 +151,29 @@ def test_unicode_label(
     reversed_int = 1 if not reversed else -1
 
     for i in range(start, end + reversed_int, reversed_int):
-        code_point = loaded[i]
-        print(chr(code_point), hex(code_point), unicodedata.name(chr(code_point)))
+        label = loaded[i]
+        if isinstance(label, (np.integer, int)):
+            code_point = label
+            char = chr(code_point)
+            try:
+                name = unicodedata.name(char)
+            except ValueError:
+                name = "NAME NOT FOUND"
+            print(f"{char} {hex(code_point)} {name}")
+        elif isinstance(label, str):
+            char = label
+            try:
+                names = " / ".join(unicodedata.name(c) for c in char)
+                hexes = " + ".join(hex(ord(c)) for c in char)
+                print(f"{char} ({hexes}) {names}")
+            except ValueError:
+                print(f"{char} (NAME NOT FOUND)")
 
 
-INDEX = 1091
+INDEX = 4000
 
 test_unicode_tensor(
-    path="unicode_tensors_0.npy",
+    path="combined_unicode_tensors_0.npy",
     how_many=5,
     starting_from=INDEX,
     reversed=False,
@@ -167,7 +182,7 @@ test_unicode_tensor(
 "ᐚ ᐛ"
 
 test_unicode_label(
-    path="unicode_labels_0.npy",
+    path="combined_unicode_labels_0.npy",
     how_many=5,
     starting_from=INDEX,
     reversed=False,
