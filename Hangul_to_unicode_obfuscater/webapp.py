@@ -71,7 +71,7 @@ HTML_TEMPLATE = """
             padding: 12px 24px; font-size: 1.1em; cursor: pointer;
             background-color: #007bff; color: white; border: none; border-radius: 8px;
         }
-        #result-container {
+        .result-container {
             margin-top: 25px; padding: 20px; background-color: #fff;
             border: 1px solid #dee2e6; border-radius: 8px;
             min-height: 60px; font-size: 2.5em; word-wrap: break-word;
@@ -88,7 +88,8 @@ HTML_TEMPLATE = """
         <button type="submit" id="convert-btn">변환하기</button>
     </form>
     
-    <div id="result-container"></div>
+    <div id="result-container-1" class="result-container"></div>
+    <div id="result-container-2" class="result-container"></div>
     <div id="status">
         {% if not ready %}
         모델 초기화 중입니다...
@@ -100,7 +101,8 @@ HTML_TEMPLATE = """
     <script>
         const form = document.getElementById('obfuscate-form');
         const inputText = document.getElementById('input-text');
-        const resultContainer = document.getElementById('result-container');
+        const resultContainer1 = document.getElementById('result-container-1');
+        const resultContainer2 = document.getElementById('result-container-2');
         const statusDiv = document.getElementById('status');
         const convertBtn = document.getElementById('convert-btn');
 
@@ -129,7 +131,8 @@ HTML_TEMPLATE = """
             if (!text) return;
 
             statusDiv.textContent = '변환 중입니다. 잠시만 기다려주세요...';
-            resultContainer.innerHTML = '';
+            resultContainer1.innerHTML = '';
+            resultContainer2.innerHTML = '';
             convertBtn.disabled = true;
 
             try {
@@ -145,11 +148,19 @@ HTML_TEMPLATE = """
                 }
 
                 const data = await response.json();
+                candidate1 = data[0]
+                candidate2 = data[1]
                 
-                data.forEach(item => {
+                candidate1.forEach(item => {
                     const charSpan = document.createElement('span');
                     charSpan.textContent = item;
-                    resultContainer.appendChild(charSpan);
+                    resultContainer1.appendChild(charSpan);
+                });
+
+                candidate2.forEach(item => {
+                    const charSpan = document.createElement('span');
+                    charSpan.textContent = item;
+                    resultContainer2.appendChild(charSpan);
                 });
 
                 statusDiv.textContent = '변환 완료.';
@@ -191,22 +202,27 @@ def convert():
     if not input_string:
         return jsonify([])
 
-    results = []
+    results1 = []
+    results2 = []
     for char in input_string:
         if char.isspace():
-            results.append(" ")
+            results1.append(" ")
+            results2.append(" ")
             continue
 
         # 한글 또는 변환 가능한 문자인지 확인
         if "가" <= char <= "힣":
-            similar_chars = obfuscator.find_similar_unicode(char, k=1)
+            similar_chars = obfuscator.find_similar_unicode(char, k=2)
             if similar_chars and similar_chars[0]["Character"]:
-                obfuscated_char = similar_chars[0]["Character"]
-                results.append(obfuscated_char)
-        else:
-            results.append(char)  # 한글이 아니면 원본 유지
+                obfuscated_char1 = similar_chars[0]["Character"]
+                obfuscated_char2 = similar_chars[1]["Character"]
+                results1.append(obfuscated_char1)
+                results2.append(obfuscated_char2)
+        else:  # 한글이 아니면 원본 유지
+            results1.append(char)
+            results2.append(char)
 
-    return jsonify(results)
+    return jsonify([results1, results2])
 
 
 def run_app():
