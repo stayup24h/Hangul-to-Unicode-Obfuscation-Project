@@ -22,6 +22,7 @@ class H2UObfuscator:
         self.MODEL_PATH = "./final.keras"
 
         self.unicode_labels = np.load(self.UNICODE_MAP_FILENAME, allow_pickle=True)
+        self.hangle_labels = np.load(self.HANGLE_MAP_FILENAME, allow_pickle=True)
 
         # --- 이미지 생성기 설정 ---
         self.IMAGE_HEIGHT = 128
@@ -120,11 +121,11 @@ class H2UObfuscator:
         self.char_vector = self.ocr(korean_char)
 
 
-        D, I = self.index.search(self.char_vector, k)
+        self.D, self.I = self.index.search(self.char_vector, k)
 
         results = []
 
-        for rank, (idx, distance) in enumerate(zip(I[0], D[0])):
+        for rank, (idx, distance) in enumerate(zip(self.I[0], self.D[0])):
             if idx >= 0:
                 try:
                     code_point = self.unicode_labels[idx]
@@ -144,32 +145,16 @@ class H2UObfuscator:
     def find_similar_hangle(self, unicode_char, k=5):
         """유니코드 문자를 입력받아 FAISS 한글 인덱스에서 시각적으로 가장 유사한 상위 k개의 한글 문자를 반환합니다.
         """
-        if not hasattr(self, "index"):
-            if not os.path.exists(self.FAISS_HANGLE_INDEX_FILENAME):
-                raise FileNotFoundError(f"FAISS index not found: {self.FAISS_HANGLE_INDEX_FILENAME}")
-            self.index = faiss.read_index(self.FAISS_HANGLE_INDEX_FILENAME)
 
-        if not hasattr(self, "U_map"):
-            if not os.path.exists(self.HANGLE_MAP_FILENAME):
-                raise FileNotFoundError(f"Hangle map .npy not found: {self.HANGLE_MAP_FILENAME}")
-            self.U_map = np.load(self.HANGLE_MAP_FILENAME, allow_pickle=True)
+        self.char_vector = self.ocr(unicode_char)
 
-        char_vector = self.ocr(unicode_char)
-
-        vec = np.asarray(char_vector, dtype=np.float32)
-        if vec.ndim == 1:
-            vec = np.expand_dims(vec, 0)
-
-        if vec.shape[1] != self.index.d:
-            raise ValueError(f"Vector dim ({vec.shape[1]}) does not match FAISS index dim ({self.index.d}).")
-
-        D, I = self.index.search(vec, k)
+        self.D, self.I = self.index.search(self.char_vector, k)
 
         results = []
-        for rank, (idx, distance) in enumerate(zip(I[0], D[0])):
+        for rank, (idx, distance) in enumerate(zip(self.I[0], self.D[0])):
             if idx >= 0:
                 try:
-                    code_point = int(self.U_map[idx])
+                    code_point = self.hangle_labels[idx]
                     hangle_char = chr(code_point)
                 except Exception:
                     code_point = None
@@ -178,8 +163,7 @@ class H2UObfuscator:
                 results.append({
                     "Rank": rank + 1,
                     "Character": hangle_char,
-                    "CodePoint": f"U+{code_point:04X}" if code_point is not None else None,
-                    "Similarity_Distance": float(distance),
+                    "Similarity_Distance": float(distance)
                 })
 
         return results
