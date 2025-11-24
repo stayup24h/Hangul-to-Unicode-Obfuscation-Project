@@ -2,8 +2,6 @@ import numpy as np
 import tensorflow as tf
 import keras
 from tensorflow.keras import Model
-from sklearn.model_selection import KFold
-from copy import deepcopy
 import os
 import matplotlib.pyplot as plt
 import faiss
@@ -142,7 +140,7 @@ class H2UObfuscator:
             if idx >= 0:
                 try:
                     code_point = self.unicode_labels[idx]
-                    unicode_char = chr(code_point)
+                    unicode_char = code_point
                 except Exception:
                     code_point = None
                     unicode_char = ""
@@ -168,7 +166,7 @@ class H2UObfuscator:
             if idx >= 0:
                 try:
                     code_point = self.hangle_labels[idx]
-                    hangle_char = chr(code_point)
+                    hangle_char = code_point
                 except Exception:
                     code_point = None
                     hangle_char = ""
