@@ -8,7 +8,7 @@ import os
 import matplotlib.pyplot as plt
 import faiss
 from PIL import Image, ImageDraw, ImageFont
-
+from fontTools.ttLib import TTFont
 
 
 class H2UObfuscator:
@@ -21,8 +21,11 @@ class H2UObfuscator:
         self.HANGLE_MAP_FILENAME = "./hangle_labels.npy"
         self.MODEL_PATH = "./final.keras"
 
+        self.unicode_index = faiss.read_index(self.FAISS_UNICODE_INDEX_FILENAME)
+        self.hangle_index = faiss.read_index(self.FAISS_HANGLE_INDEX_FILENAME)
         self.unicode_labels = np.load(self.UNICODE_MAP_FILENAME, allow_pickle=True)
         self.hangle_labels = np.load(self.HANGLE_MAP_FILENAME, allow_pickle=True)
+
 
         # --- 이미지 생성기 설정 ---
         self.IMAGE_HEIGHT = 128
@@ -67,14 +70,19 @@ class H2UObfuscator:
             }
         )
         
-
     def render_char_to_tensor(self, char):
         """문자를 이미지로 렌더링하고 Numpy 텐서로 변환합니다."""
         try:
             font = ImageFont.truetype(self._font_path, self.FONT_SIZE)
+            ttfont = TTFont(self._font_path, lazy=True)
         except IOError:
             # Pillow가 폰트 파일을 열지 못하는 경우
             return None
+        
+        #  폰트의 cmap(character-to-glyph-map)을 확인하여 문자 지원 여부 판단
+        for cmap in ttfont.get("cmap").tables:
+            if ord(char) not in cmap.cmap:
+                return None
 
         image = Image.new("L", (self.IMAGE_WIDTH, self.IMAGE_HEIGHT), "white")
         draw = ImageDraw.Draw(image)
@@ -96,7 +104,11 @@ class H2UObfuscator:
 
         # 이미지를 Numpy 배열로 변환하고 0~1 사이 값으로 정규화
         tensor = np.array(image, dtype=np.float32) / 255.0
-
+        
+        # 렌더 후에도 이미지가 흰색이면 None 반환
+        if np.all(tensor == 1.0):
+            return None
+        
         # reshape()의 첫 번째 차원은 제거합니다. 배열에 직접 할당할 것이기 때문입니다.
         return tensor.reshape((self.IMAGE_WIDTH, self.IMAGE_HEIGHT, 1))
     
@@ -104,10 +116,11 @@ class H2UObfuscator:
         X = self.render_char_to_tensor(character)                               # shape: (N, 128,128,1)
 
         if X.ndim == 3:
-            X = np.expand_dims(X, -1)
+            X = np.expand_dims(X, 0)
         X = X.astype(np.float32)
         if np.max(X) > 1.5:
             X /= 255.0
+            
 
         # 모델 예측
         preds = self.model.predict(X, batch_size=256, verbose=1)  # (N,68)
@@ -121,7 +134,7 @@ class H2UObfuscator:
         self.char_vector = self.ocr(korean_char)
 
 
-        self.D, self.I = self.index.search(self.char_vector, k)
+        self.D, self.I = self.unicode_index.search(self.char_vector, k)
 
         results = []
 
@@ -148,7 +161,7 @@ class H2UObfuscator:
 
         self.char_vector = self.ocr(unicode_char)
 
-        self.D, self.I = self.index.search(self.char_vector, k)
+        self.D, self.I = self.hangle_index.search(self.char_vector, k)
 
         results = []
         for rank, (idx, distance) in enumerate(zip(self.I[0], self.D[0])):
