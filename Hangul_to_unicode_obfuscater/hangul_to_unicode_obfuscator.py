@@ -26,9 +26,9 @@ class H2UObfuscator:
 
 
         # --- 이미지 생성기 설정 ---
-        self.IMAGE_HEIGHT = 128
-        self.IMAGE_WIDTH = 128
-        self.FONT_SIZE = 96  # 이미지 크기에 맞게 조절 필요
+        self.IMAGE_HEIGHT = 150
+        self.IMAGE_WIDTH = 150
+        self.FONT_SIZE = 112 # 이미지 크기에 맞게 조절 필요
 
         # --- OCR 모델 설정 ---
         L_SLICE = slice(0, 19)
