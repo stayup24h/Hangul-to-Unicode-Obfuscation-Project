@@ -3,10 +3,10 @@ from flask import Flask, request, jsonify, render_template_string
 import threading
 import webbrowser
 import logging
-from hangul_to_unicode_obfuscator import H2UObfuscator
 
 app = Flask(__name__)
 obfuscator = None
+init_error = None
 
 # Flask 기본 로깅을 비활성화
 log = logging.getLogger("werkzeug")
@@ -15,10 +15,17 @@ log.setLevel(logging.ERROR)
 
 def initialize_obfuscator():
     """백그라운드에서 H2UObfuscator 모델을 로드합니다."""
-    global obfuscator
+    global obfuscator, init_error
     print("Initializing H2UObfuscator... (might take a moment)")
-    obfuscator = H2UObfuscator()
-    print("H2UObfuscator initialized. The web service is ready.")
+    try:
+        # TensorFlow 로딩을 백그라운드 스레드로 지연시켜 앱 시작 블로킹을 방지합니다.
+        from hangul_to_unicode_obfuscator import H2UObfuscator
+
+        obfuscator = H2UObfuscator()
+        print("H2UObfuscator initialized. The web service is ready.")
+    except Exception as exc:
+        init_error = str(exc)
+        print(f"Failed to initialize H2UObfuscator: {init_error}")
 
 
 # # 유니코드 코드 포인트 범위에 따른 Noto 글꼴 매핑
@@ -187,12 +194,15 @@ def index():
 @app.route("/status")
 def status():
     """모델 초기화 상태를 반환합니다."""
-    return jsonify({"ready": obfuscator is not None})
+    return jsonify({"ready": obfuscator is not None, "error": init_error})
 
 
 @app.route("/convert", methods=["POST"])
 def convert():
     """문자열 변환 요청을 처리합니다."""
+    if init_error is not None:
+        return jsonify({"error": f"모델 초기화 실패: {init_error}"}), 500
+
     if obfuscator is None:
         return jsonify({"error": "난독화 모델이 아직 초기화되지 않았습니다."}), 503
 
